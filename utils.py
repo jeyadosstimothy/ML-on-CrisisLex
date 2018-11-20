@@ -20,7 +20,7 @@ lemmatizer = WordNetLemmatizer()
 stemmer = SnowballStemmer(NLTK_EN)
 
 
-def cleanTweets(data, splitWords=True):
+def cleanTweets(data, splitWords=False):
     def clean(text):
         lower = text.lower()
         usersRemoved = re.sub(r'(rt )?@[^ \t]*:?', '', lower)
@@ -107,7 +107,7 @@ def createDocumentCorpus(dfList, splitWords):
     return documentList
 
 
-def readDataset(path, classification=True, splitWords=True):
+def readDataset(path, classification, splitWords):
     csvPaths = getDatasetCsvPaths(path)
     dfList = [{'path': path, 'df': pandas.read_csv(path)} for path in csvPaths]
 
@@ -124,6 +124,33 @@ def getClassName(obj):
 def saveModel(trainedModel, filePrefix=''):
     # saves the trained model to pickle file
     filename = filePrefix + getClassName(trainedModel) + '.pickle'
+    createDirectoryIfNotExists(constants.MODELS_PATH)
     path = os.path.join(constants.MODELS_PATH, filename)
     print('Saving model to %s' % path)
     pickle.dump(trainedModel, open(path, 'wb'))
+
+
+
+def loadDataset(reprocessDataset=False, classification=True, splitWords=False):
+    # reads dataset, processes it and stores it for future use if reprocessDataset is True
+    # else loads the preprocessed dataset and returns it
+    createDirectoryIfNotExists(constants.RESOURCES_PATH)
+    processedDataPath = constants.CLASSIFICATION_DATA_PATH if classification else constants.TOPIC_MODEL_DATA_PATH
+
+    if reprocessDataset:
+        print('Reading and Processing Dataset from %s' % constants.DATASET_PATH)
+        dataset = readDataset(constants.DATASET_PATH, classification, splitWords)
+        print('Storing Processed Dataset to %s' % processedDataPath)
+        pickle.dump(dataset, open(processedDataPath, 'wb'))
+    else:
+        print('Reading Preprocessed Dataset from %s' % processedDataPath)
+        dataset = pickle.load(open(processedDataPath, 'rb'))
+    return dataset
+
+
+def createDirectoryIfNotExists(path):
+    # Returns True if directory did not exist and was created. Else returns False
+    if not os.path.exists(path):
+        os.makedirs(path)
+        return True
+    return False

@@ -11,8 +11,12 @@ def parseArgs():
     # Parses commandline arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', '--reprocessDataset', action='store_true',
-                        help='If specified, reads and processes the dataset again.'+
+                        help='Must be specified when running the program for the first time '+
+                             '(when preprocessed dataset is not available). '+
+                             'If specified, reads and processes the dataset again. '+
                              'Else reads an already processed dataset from ' + constants.CLASSIFICATION_DATA_PATH)
+    parser.add_argument('-p', '--printMetrics', action='store_true',
+                        help='If specified, prints the Classification Reports and Confusion Matrices')
     return parser.parse_args(sys.argv[1:])
 
 
@@ -39,23 +43,9 @@ def trainModel(classifier, xTrain, yTrain, xValid, yValid):
     return classifier, metrics.accuracy_score(predictions, yValid)
 
 
-def loadDataset(reprocessDataset):
-    # reads dataset, processes it and stores it for future use if reprocessDataset is True
-    # else loads the preprocessed dataset and returns it
-    if reprocessDataset:
-        print('Reading and Processing Dataset from %s' % constants.DATASET_PATH)
-        dataset = utils.readDataset(constants.DATASET_PATH, splitWords=False)
-        print('Storing Processed Dataset to %s' % constants.CLASSIFICATION_DATA_PATH)
-        pickle.dump(dataset, open(constants.CLASSIFICATION_DATA_PATH, 'wb'))
-    else:
-        print('Reading Preprocessed Dataset from %s' % constants.CLASSIFICATION_DATA_PATH)
-        dataset = pickle.load(open(constants.CLASSIFICATION_DATA_PATH, 'rb'))
-    return dataset
-
-
 if __name__ == '__main__':
     arguments = parseArgs()
-    dataset = loadDataset(arguments.reprocessDataset)
+    dataset = utils.loadDataset(arguments.reprocessDataset)
     xData, yData = dataset[constants.TWEET_COLUMN], dataset[constants.LABEL_COLUMN]
 
     dataEncodersList = [(CountVectorizer(analyzer='word', token_pattern=r'\w{1,}', ngram_range=(1, 2)), preprocessing.LabelEncoder()),
@@ -84,8 +74,8 @@ if __name__ == '__main__':
             trainedModel, accuracy = trainModel(model, xTrain, yTrain, xValid, yValid)
             print('Accuracy:', accuracy)
 
-            # Uncomment to print Classification Reports and Confusion Matrices:
-            # printMetrics(trainedModel, xValid, yValid)
+            if arguments.printMetrics:
+                printMetrics(trainedModel, xValid, yValid)
 
             filePrefix = utils.getClassName(xEncoder) + '_'
             utils.saveModel(trainedModel, filePrefix=filePrefix)
